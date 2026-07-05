@@ -20,18 +20,31 @@ const MAX_REVISIONS = 3;
 /** Total model-call budget for one pass: the initial attempt plus two retries. */
 const MAX_STREAM_ATTEMPTS = 3;
 
+/** Rate limits and server errors are worth retrying; anything else is not. */
+function isTransient(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const status = (err as { status?: unknown }).status;
+  return typeof status === "number" && (status === 429 || status >= 500);
+}
+
 /**
  * Streams a draft and validates that it contains a parseable fenced JSON block.
- * A dropped stream surfaces as an extraction failure (missing closing fence or
- * malformed JSON); the draft is cheap to regenerate, so retry with a fresh
- * stream within the budget. Returns null once the budget is spent.
+ * Transient API errors (429/5xx) and truncated streams — which surface as
+ * extraction failures — are retried within the budget; the draft is cheap to
+ * regenerate. Returns null once the budget is spent or on a non-transient error.
  */
 async function streamValidDraft(
   behavior: MockBehavior,
   state: MockState,
 ): Promise<string | null> {
   for (let call = 1; call <= MAX_STREAM_ATTEMPTS; call += 1) {
-    const text = await mockStream(behavior, state);
+    let text: string;
+    try {
+      text = await mockStream(behavior, state);
+    } catch (err) {
+      if (isTransient(err)) continue;
+      return null;
+    }
     try {
       extractJson(text);
       return text;
@@ -46,9 +59,10 @@ async function streamValidDraft(
  * Runs one content-generation pass: stream a draft, extract it, revise until it
  * passes review, then hand off to the next stage.
  *
- * This is a faithful (stripped-down) reproduction of the real pipeline — and it
- * ships with three real bugs from that pipeline. Your job is to fix them so the
- * test suite passes. See the README for the symptoms. (Do not edit the tests.)
+ * Failure policy: transient model errors and truncated streams are retried
+ * within a fixed budget, review is bounded by MAX_REVISIONS, and a failed
+ * hand-off surfaces as an error — anything unrecoverable returns status
+ * "error" rather than throwing.
  */
 export async function generate(input: GenerateInput): Promise<GenerateResult> {
   const state: MockState = { calls: 0 };
@@ -58,10 +72,16 @@ export async function generate(input: GenerateInput): Promise<GenerateResult> {
     return { status: "error", attempts: 0 };
   }
 
-  // Revise until the draft passes review.
+  // Revise until the draft passes review, within the revision budget. A draft
+  // that never passes is a failure, not a success with a high attempt count.
   let attempt = 0;
-  while (!input.reviewPasses(attempt) && attempt < 50) {
+  let passed = input.reviewPasses(attempt);
+  while (!passed && attempt < MAX_REVISIONS) {
     attempt += 1;
+    passed = input.reviewPasses(attempt);
+  }
+  if (!passed) {
+    return { status: "error", attempts: attempt };
   }
 
   // The hand-off decides the outcome: a failed next stage must surface as an
