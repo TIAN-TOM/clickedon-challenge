@@ -61,8 +61,8 @@ async function streamValidDraft(
  *
  * Failure policy: transient model errors and truncated streams are retried
  * within a fixed budget, review is bounded by MAX_REVISIONS, and a failed
- * hand-off surfaces as an error — anything unrecoverable returns status
- * "error" rather than throwing.
+ * hand-off surfaces as an error — model-call, extraction, and hand-off
+ * failures return status "error" rather than throwing.
  */
 export async function generate(input: GenerateInput): Promise<GenerateResult> {
   const state: MockState = { calls: 0 };

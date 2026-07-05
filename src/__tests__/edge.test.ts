@@ -15,6 +15,7 @@ describe("Edge — recovery must not mask a later hand-off failure", () => {
       reviewPasses: () => true,
     });
     expect(res.status).toBe("error");
+    // attempts counts revisions only — stream retries must not leak into it.
     expect(res.attempts).toBe(0);
   });
 });
