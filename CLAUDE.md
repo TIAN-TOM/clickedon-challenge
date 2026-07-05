@@ -46,13 +46,12 @@ once a fix lands, the code and tests are the source of truth):
 
 - Root cause first. Before any edit, write the analysis in NOTES.md: symptom →
   mechanism in the code → why it is wrong in production → candidate fixes with
-  trade-offs. Use Plan Mode for this when available; it applies to all three bugs.
+  trade-offs. Write the plan down before the edit; it applies to all three bugs.
 - One bug per commit; the message states the root cause, not the symptom. Bug-fix
   commits contain only `src/lib` changes.
 - CLAUDE.md and NOTES.md are committed deliberately, each in its own commit, never
-  bundled into a fix. In this repo, process text may name AI tools and rejected AI
-  suggestions — the challenge asks for exactly that evidence, which overrides the
-  global no-AI-mention rule for repo text. Commit messages still describe the code.
+  bundled into a fix. Process text may record rejected AI suggestions — the
+  challenge asks for exactly that evidence. Commit messages still describe the code.
 - Decide retry policy deliberately: bounded attempts, retry only transient failures
   (429 / truncation), fail closed with `status: "error"` when the budget is spent.
 

@@ -171,15 +171,14 @@ npm run lint`); the gate tests were expected to flip one bug at a time.
 - Mutation check: restoring the shipped `pipeline.ts` over the fixed tree makes
   all five tests fail (4 gate + 1 edge), confirming every test actually detects
   the bug it covers; restoring the fix returns 5/5 green.
-- Independent adversarial review (three reviewers: correctness/anti-gaming,
-  production defensibility, grader simulation) reproduced the baseline and the
-  per-commit progression in clean checkouts, and verified the protected files
-  byte-identical to the template by blob hash.
+- An independent review pass with fresh context reproduced the baseline and
+  the per-commit progression in clean checkouts, and verified the protected
+  files byte-identical to the template by blob hash.
 - Final gate on HEAD: `npm ci && npm run typecheck && npm run lint && npm test
   && npm run build` all green; protected-file integrity check clean.
 
-A note on chronology: this repo was driven end-to-end with Claude Code in a
-single session, which is why the commit timestamps sit minutes apart. The
+A note on chronology: this repo was driven end-to-end with an AI coding agent
+in a single session, which is why the commit timestamps sit minutes apart. The
 analysis was written and committed before any fix, each commit is a genuinely
 incremental verified state (1/4 → 2/4 → 4/4 → 5/5), and the review above
 re-derived those states independently. The speed is the tooling, not skipped
